@@ -1,5 +1,6 @@
 ﻿using eLibraryAPI.Data;
 using eLibraryAPI.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -14,77 +15,92 @@ namespace eLibraryAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public AuthController(ApplicationDbContext context)
+        public AuthController(ApplicationDbContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
         {
             _context = context;
+            _userManager = userManager;
+            _roleManager = roleManager;
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginModel model)
+        public async Task<IActionResult> Login([FromBody] AuthModels.LoginModel model)
         {
-            var user = _context.Users.SingleOrDefault(u => u.Username == model.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
-                return Unauthorized("Invalid username or password.");
+            var user = await _userManager.FindByNameAsync(model.Username);
+            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+            {
+                var token = generateToken(user);
 
-            var token = generateToken(user);
+                return Ok(new { token = token });
+            }
 
-            return Ok(new { Token = token, Role = user.Role });
+            return Unauthorized();
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] RegisterModel model)
+        public async Task<IActionResult> Register([FromBody] AuthModels.RegisterModel model)
         {
-            if (_context.Users.Any(u => u.Username == model.Username))
+            var user = new IdentityUser { UserName = model.Username, Email = model.Email };
+            var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (result.Succeeded)
             {
-                return BadRequest("Username already exists.");
+                await _userManager.AddToRoleAsync(user, "User");
+                var token = generateToken(user);
+                return Ok(new { Token = token,message = "User registered successfully" });
             }
 
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
-
-            var user = new User
-            {
-                Username = model.Username,
-                PasswordHash = hashedPassword,
-                Role = "User", // default role
-                Email = model.Email
-            };
-
-            _context.Users.Add(user);
-            _context.SaveChanges();
-            var token = generateToken(user);
-            return Ok(new { Token = token, Role = user.Role, Description = "user registered successfully" });
+            return BadRequest(result.Errors);
         }
 
-        private string generateToken(User user)
+        private async Task<string> generateToken(IdentityUser user)
         {
+            var userRoles = await _userManager.GetRolesAsync(user);
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes("YourSecretKeyHere");
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
+
+            var authClaims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Role, user.Role)
-                }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+                    new Claim(JwtRegisteredClaimNames.Sub, user.UserName!),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
+
+            authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                expires: DateTime.Now.AddSeconds(double.Parse(_configuration["Jwt:ExpirySeconds"]!)),
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)),
+                SecurityAlgorithms.HmacSha256));
+
+            var tokenValue = tokenHandler.WriteToken(token);
+            return tokenValue;
         }
+
     }
 
-    public class LoginModel
+    public class AuthModels
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
-    }
+        public class LoginModel
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
+        }
 
-    public class RegisterModel
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Email { get; set; }
+        public class RegisterModel
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
+            public string Email { get; set; }
+        }
+
+        public class UserRole
+        {
+            public string Username { get; set; } = string.Empty;
+            public string Role { get; set; } = string.Empty;
+        }
     }
 }
