@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using static eLibraryAPI.Controllers.AuthModels;
 
 namespace eLibraryAPI.Controllers
 {
@@ -19,11 +20,12 @@ namespace eLibraryAPI.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
 
-        public AuthController(ApplicationDbContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
+        public AuthController(ApplicationDbContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager,IConfiguration configuration)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
+            _configuration = configuration;
         }
 
         [HttpPost("login")]
@@ -32,9 +34,9 @@ namespace eLibraryAPI.Controllers
             var user = await _userManager.FindByNameAsync(model.Username);
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
-                var token = generateToken(user);
+                var token = await generateToken(user);
 
-                return Ok(new { token = token });
+                return Ok(new { Token = token });
             }
 
             return Unauthorized();
@@ -48,9 +50,43 @@ namespace eLibraryAPI.Controllers
 
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, "User");
-                var token = generateToken(user);
-                return Ok(new { Token = token,message = "User registered successfully" });
+                await _userManager.AddToRoleAsync(user, "Users");
+                var token = await generateToken(user);
+                return Ok(new { Message = "User registered successfully", Token = token});
+            }
+            return BadRequest(result.Errors);
+        }
+
+        [HttpGet("add-role")]
+        public async Task<IActionResult> AddRole([FromQuery] string role)
+        {
+            if (!await _roleManager.RoleExistsAsync(role))
+            {
+                var result = await _roleManager.CreateAsync(new IdentityRole(role));
+                if (result.Succeeded)
+                {
+                    return Ok(new { message = "Role added successfully" });
+                }
+
+                return BadRequest(result.Errors);
+            }
+
+            return BadRequest("Role already exists");
+        }
+
+        [HttpPost("assign-role")]
+        public async Task<IActionResult> AssignRole([FromBody] UserRole model)
+        {
+            var user = await _userManager.FindByNameAsync(model.Username);
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
+
+            var result = await _userManager.AddToRoleAsync(user, model.Role);
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "Role assigned successfully" });
             }
 
             return BadRequest(result.Errors);
@@ -62,10 +98,10 @@ namespace eLibraryAPI.Controllers
             var tokenHandler = new JwtSecurityTokenHandler();
 
             var authClaims = new List<Claim>
-                {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.UserName!),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                };
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserName!),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
 
             authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 

@@ -4,10 +4,10 @@ namespace eLibraryAPI.Enums
 {
     public enum RoleNames
     {
-        [Description("Admin")]
-        Admin,
+        [Description("Admins")]
+        Admins,
 
-        [Description("User")]
-        User
+        [Description("Users")]
+        Users
     }
 }
