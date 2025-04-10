@@ -1,11 +1,13 @@
 ﻿using eLibraryAPI.Data;
 using eLibraryAPI.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using static eLibraryAPI.Controllers.AuthModels;
 
 namespace eLibraryAPI.Controllers
 {
@@ -14,77 +16,127 @@ namespace eLibraryAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public AuthController(ApplicationDbContext context)
+        public AuthController(ApplicationDbContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager,IConfiguration configuration)
         {
             _context = context;
+            _userManager = userManager;
+            _roleManager = roleManager;
+            _configuration = configuration;
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginModel model)
+        public async Task<IActionResult> Login([FromBody] AuthModels.LoginModel model)
         {
-            var user = _context.Users.SingleOrDefault(u => u.Username == model.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
-                return Unauthorized("Invalid username or password.");
+            var user = await _userManager.FindByNameAsync(model.Username);
+            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+            {
+                var token = await generateToken(user);
 
-            var token = generateToken(user);
+                return Ok(new { Token = token });
+            }
 
-            return Ok(new { Token = token, Role = user.Role });
+            return Unauthorized();
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] RegisterModel model)
+        public async Task<IActionResult> Register([FromBody] AuthModels.RegisterModel model)
         {
-            if (_context.Users.Any(u => u.Username == model.Username))
+            var user = new IdentityUser { UserName = model.Username, Email = model.Email };
+            var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (result.Succeeded)
             {
-                return BadRequest("Username already exists.");
+                await _userManager.AddToRoleAsync(user, "Users");
+                var token = await generateToken(user);
+                return Ok(new { Message = "User registered successfully", Token = token});
+            }
+            return BadRequest(result.Errors);
+        }
+
+        [HttpGet("add-role")]
+        public async Task<IActionResult> AddRole([FromQuery] string role)
+        {
+            if (!await _roleManager.RoleExistsAsync(role))
+            {
+                var result = await _roleManager.CreateAsync(new IdentityRole(role));
+                if (result.Succeeded)
+                {
+                    return Ok(new { message = "Role added successfully" });
+                }
+
+                return BadRequest(result.Errors);
             }
 
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
-
-            var user = new User
-            {
-                Username = model.Username,
-                PasswordHash = hashedPassword,
-                Role = "User", // default role
-                Email = model.Email
-            };
-
-            _context.Users.Add(user);
-            _context.SaveChanges();
-            var token = generateToken(user);
-            return Ok(new { Token = token, Role = user.Role, Description = "user registered successfully" });
+            return BadRequest("Role already exists");
         }
 
-        private string generateToken(User user)
+        [HttpPost("assign-role")]
+        public async Task<IActionResult> AssignRole([FromBody] UserRole model)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes("YourSecretKeyHere");
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var user = await _userManager.FindByNameAsync(model.Username);
+            if (user == null)
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Role, user.Role)
-                }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+                return BadRequest("User not found");
+            }
+
+            var result = await _userManager.AddToRoleAsync(user, model.Role);
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "Role assigned successfully" });
+            }
+
+            return BadRequest(result.Errors);
         }
+
+        private async Task<string> generateToken(IdentityUser user)
+        {
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var authClaims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserName!),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                expires: DateTime.Now.AddSeconds(double.Parse(_configuration["Jwt:ExpirySeconds"]!)),
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)),
+                SecurityAlgorithms.HmacSha256));
+
+            var tokenValue = tokenHandler.WriteToken(token);
+            return tokenValue;
+        }
+
     }
 
-    public class LoginModel
+    public class AuthModels
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
-    }
+        public class LoginModel
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
+        }
 
-    public class RegisterModel
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Email { get; set; }
+        public class RegisterModel
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
+            public string Email { get; set; }
+        }
+
+        public class UserRole
+        {
+            public string Username { get; set; } = string.Empty;
+            public string Role { get; set; } = string.Empty;
+        }
     }
 }

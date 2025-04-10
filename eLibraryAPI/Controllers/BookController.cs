@@ -8,7 +8,7 @@ namespace eLibraryAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Users,Admins")]
     public class BookController : ControllerBase
     {
 
@@ -22,7 +22,7 @@ namespace eLibraryAPI.Controllers
 
         // Search books by title
         //git healthcheck
-        [HttpGet("searchByTitle")]
+        [HttpPost("searchByTitle")]
         public async Task<IActionResult> SearchBooksByTitle(string title)
         {
             if (string.IsNullOrEmpty(title))

@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using eLibraryAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 namespace eLibraryAPI.Controllers
 {
         [Route("api/[controller]")]
         [ApiController]
+        [Authorize(Roles = "Users")]
         public class UserController : ControllerBase
         {
             private readonly ApplicationDbContext _context;

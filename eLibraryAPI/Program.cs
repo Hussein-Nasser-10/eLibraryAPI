@@ -1,5 +1,7 @@
 using eLibraryAPI.Data;
+using eLibraryAPI.Enums;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -10,19 +12,41 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//services helps in checking for user existance and role, and also in authentication and autherization
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+    options.Password.RequireNonAlphanumeric = false
+)
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
+            ValidateIssuer = true,
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("YourSecretKeyHere")),
-            NameClaimType = "Name1",
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
-    });//
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var role in Enum.GetValues(typeof(RoleNames)))
+    {
+        var roleName = role.ToString();
+        options.AddPolicy($"{roleName}Policy", policy =>
+            policy.RequireRole(roleName!));
+    }
+});
 
 builder.Services.AddCors(options =>
 {
