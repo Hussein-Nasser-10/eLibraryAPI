@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace eLibraryAPI.Models
+namespace eLibraryAPI.Data.Models
 {
     public class User
     {

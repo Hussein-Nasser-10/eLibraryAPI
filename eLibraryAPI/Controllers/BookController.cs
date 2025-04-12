@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using eLibraryAPI.Models;
 using Microsoft.AspNetCore.Authorization;
+using eLibraryAPI.Services;
+using eLibraryAPI.Models.Models;
 
 namespace eLibraryAPI.Controllers
 {
@@ -13,15 +15,22 @@ namespace eLibraryAPI.Controllers
     {
 
         private readonly ApplicationDbContext _context;
+        private readonly IBooksService _booksService;
 
-        public BookController(ApplicationDbContext context)
+        public BookController(ApplicationDbContext context,IBooksService booksService)
         {
             _context = context;
+            _booksService = booksService;
         }
-        // Add these methods inside your BookController
+
+        [HttpGet("ReadAllBooks")]
+        public async Task<IActionResult> GetAllBooks()
+        {
+            var books = await _booksService.GetBooks();
+            return Ok(books);
+        }
 
         // Search books by title
-        //git healthcheck
         [HttpPost("searchByTitle")]
         public async Task<IActionResult> SearchBooksByTitle(string title)
         {

@@ -1,4 +1,4 @@
-﻿using eLibraryAPI.Models;
+﻿using eLibraryAPI.Data.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;

@@ -1,11 +1,14 @@
 using eLibraryAPI.Data;
-using eLibraryAPI.Enums;
 using eLibraryAPI.Middlewares;
+using eLibraryAPI.Models.Enums;
+using eLibraryAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using AutoMapper;
+using eLibraryAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +69,11 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddAutoMapper(typeof(MapperProfile));
+
+builder.Services.AddScoped<IBooksService,BooksService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 

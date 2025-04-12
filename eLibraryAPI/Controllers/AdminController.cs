@@ -1,5 +1,7 @@
 ﻿using eLibraryAPI.Data;
-using eLibraryAPI.Models;
+using eLibraryAPI.Data.Models;
+using eLibraryAPI.Models.Models;
+using eLibraryAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +15,13 @@ namespace eLibraryAPI.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
-
-        public AdminController(ApplicationDbContext context, IWebHostEnvironment environment)
+        private readonly IBooksService _booksService;
+        private readonly IUserService _userService;
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment environment,IBooksService booksService)
         {
             _context = context;
             _environment = environment;
+            _booksService = booksService;
         }
 
         // Add a new book
@@ -48,24 +52,28 @@ namespace eLibraryAPI.Controllers
         [HttpDelete("removeBook/{id}")]
         public async Task<IActionResult> RemoveBook(int id)
         {
-            var book = await _context.Books.FindAsync(id);
-            if (book == null) return NotFound("Book not found.");
-
-            _context.Books.Remove(book);
-            await _context.SaveChangesAsync();
+            var deleteState = await _booksService.deleteBook(id);
+            if (!deleteState) return NotFound("Book not found");
             return Ok("Book removed successfully.");
+        }
+
+
+        [HttpPost("updateBook")]
+        public async Task<IActionResult> UpdateBook(BookModel model)
+        {
+            await _booksService.updateBook(model);
+            return Ok("Book updated successfully.");
         }
 
         // Add a new user
         [HttpPost("addUser")]
-        public async Task<IActionResult> AddUser([FromBody] User user)
+        public async Task<IActionResult> AddUser([FromBody] UserModel user)
         {
-            if (user.PasswordHash.Length < 8)
+            if (user.Password.Length < 8)
                 return BadRequest("Password must be at least 8 characters long.");
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            var userState = await _userService.createUser(user);
+            if (!userState) return BadRequest("Something went wrong");
             return Ok("User added successfully.");
         }
 

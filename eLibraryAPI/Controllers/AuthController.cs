@@ -74,24 +74,6 @@ namespace eLibraryAPI.Controllers
             return BadRequest("Role already exists");
         }
 
-        [HttpPost("assign-role")]
-        public async Task<IActionResult> AssignRole([FromBody] UserRole model)
-        {
-            var user = await _userManager.FindByNameAsync(model.Username);
-            if (user == null)
-            {
-                return BadRequest("User not found");
-            }
-
-            var result = await _userManager.AddToRoleAsync(user, model.Role);
-            if (result.Succeeded)
-            {
-                return Ok(new { message = "Role assigned successfully" });
-            }
-
-            return BadRequest(result.Errors);
-        }
-
         private async Task<string> generateToken(IdentityUser user)
         {
             var userRoles = await _userManager.GetRolesAsync(user);
