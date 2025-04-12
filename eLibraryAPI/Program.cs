@@ -1,5 +1,6 @@
 using eLibraryAPI.Data;
 using eLibraryAPI.Enums;
+using eLibraryAPI.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -85,7 +86,7 @@ app.UseAuthorization();
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
+app.UseMiddleware<ExceptionMiddleware>();
 app.MapControllers();
 
 app.Run();
