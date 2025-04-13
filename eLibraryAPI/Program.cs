@@ -1,11 +1,14 @@
 using eLibraryAPI.Data;
-using eLibraryAPI.Enums;
 using eLibraryAPI.Middlewares;
+using eLibraryAPI.Models.Enums;
+using eLibraryAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using AutoMapper;
+using eLibraryAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +70,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddAutoMapper(typeof(MapperProfile));
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<IBooksService,BooksService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -83,7 +92,7 @@ app.UseAuthentication();
 
 
 app.UseAuthorization();
-
+app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseMiddleware<ExceptionMiddleware>();

@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using eLibraryAPI.Models;
 using Microsoft.AspNetCore.Authorization;
+using eLibraryAPI.Services;
+using eLibraryAPI.Models.Models;
+using eLibraryAPI.Models.Dtos;
 
 namespace eLibraryAPI.Controllers
 {
@@ -13,74 +16,30 @@ namespace eLibraryAPI.Controllers
     {
 
         private readonly ApplicationDbContext _context;
+        private readonly IBooksService _booksService;
 
-        public BookController(ApplicationDbContext context)
+        public BookController(ApplicationDbContext context,IBooksService booksService)
         {
             _context = context;
+            _booksService = booksService;
         }
-        // Add these methods inside your BookController
 
-        // Search books by title
-        //git healthcheck
-        [HttpPost("searchByTitle")]
-        public async Task<IActionResult> SearchBooksByTitle(string title)
+        [HttpGet("ReadAllBooks")]
+        public async Task<IActionResult> GetAllBooks()
         {
-            if (string.IsNullOrEmpty(title))
-            {
-                return BadRequest("Title cannot be empty.");
-            }
-
-           var books = await _context.Books
-                .Where(b => b.Title.ToLower().Contains(title.ToLower()))
-                .ToListAsync();
-
-            if (books.Count == 0)
-            {
-                return NotFound("No books found with that title.");
-            }
-
+            var books = await _booksService.GetBooks();
             return Ok(books);
         }
 
-        // Filter books by genre
-        [HttpGet("filterByGenre")]
-        public async Task<IActionResult> FilterBooksByGenre(string genre)
+        // Search books
+        [HttpPost("searchBooks")]
+        public async Task<IActionResult> SearchBooks(BookSearchModel model)
         {
-            if (string.IsNullOrEmpty(genre))
+            var books = await _booksService.searchBook(model);
+            if (books == null || books.Count == 0)
             {
-                return BadRequest("Genre cannot be empty.");
+                return NotFound("No books with the provided criteria");
             }
-
-            var books = await _context.Books
-                .Where(b => b.Genre.ToLower().Contains(genre.ToLower()))
-                .ToListAsync();
-
-            if (books.Count == 0)
-            {
-                return NotFound("No books found with that genre.");
-            }
-
-            return Ok(books);
-        }
-
-        // Filter books by author
-        [HttpGet("filterByAuthor")]
-        public async Task<IActionResult> FilterBooksByAuthor(string author)
-        {
-            if (string.IsNullOrEmpty(author))
-            {
-                return BadRequest("Author cannot be empty.");
-            }
-
-            var books = await _context.Books
-                .Where(b => b.Author.ToLower().Contains(author.ToLower()))
-                .ToListAsync();
-
-            if (books.Count == 0)
-            {
-                return NotFound("No books found with that author.");
-            }
-
             return Ok(books);
         }
 

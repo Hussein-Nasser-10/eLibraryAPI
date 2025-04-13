@@ -1,5 +1,5 @@
 ﻿using eLibraryAPI.Data;
-using eLibraryAPI.Models;
+using eLibraryAPI.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

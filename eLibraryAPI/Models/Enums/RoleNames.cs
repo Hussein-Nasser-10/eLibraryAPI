@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace eLibraryAPI.Enums
+namespace eLibraryAPI.Models.Enums
 {
     public enum RoleNames
     {
