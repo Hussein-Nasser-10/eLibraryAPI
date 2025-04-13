@@ -11,6 +11,7 @@
         {
             CreateMap<Book, BookModel>();
             CreateMap<BookModel, Book>();
+            CreateMap<Book, BookDto>();
         }
     }
 }

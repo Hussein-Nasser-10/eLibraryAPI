@@ -9,5 +9,7 @@ namespace eLibraryAPI.Services
         public Task<int> addBook(BookModel bookModel);
         public Task<int> updateBook(BookModel bookModel);
         public Task<bool> deleteBook(int bookId);
+        public Task<List<BookDto>> searchBook(BookSearchModel model);
+        public Task<string> uploadImage(IFormFile imageFile);
     }
 }

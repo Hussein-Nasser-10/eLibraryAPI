@@ -71,6 +71,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddAutoMapper(typeof(MapperProfile));
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IBooksService,BooksService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -91,7 +92,7 @@ app.UseAuthentication();
 
 
 app.UseAuthorization();
-
+app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseMiddleware<ExceptionMiddleware>();

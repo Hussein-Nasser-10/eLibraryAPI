@@ -5,12 +5,13 @@ using eLibraryAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 
 namespace eLibraryAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admins")]
     public class AdminController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -25,7 +26,7 @@ namespace eLibraryAPI.Controllers
         }
 
         // Add a new book
-        [HttpPost("addBook")]
+        [HttpPost("addBook1")]
         public async Task<IActionResult> AddBook([FromBody] Book book, IFormFile imageFile)
         {
             if (imageFile != null && imageFile.Length > 0)
@@ -46,6 +47,15 @@ namespace eLibraryAPI.Controllers
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
             return Ok("Book added successfully.");
+        }
+
+        [HttpPost("addBook")]
+        public async Task<IActionResult> addBook([FromForm] BookModel book)
+        {
+            string imageUrl = await _booksService.uploadImage(book.Image);
+            book.ImageUrl = imageUrl;
+            var bookId = await _booksService.addBook(book);
+            return Ok("Book added successfully");
         }
 
         // Remove a book
@@ -79,14 +89,14 @@ namespace eLibraryAPI.Controllers
 
         // Remove a user
         [HttpDelete("removeUser/{id}")]
-        public async Task<IActionResult> RemoveUser(int id)
+        public async Task<IActionResult> RemoveUser(string id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound("User not found.");
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return Ok("User removed successfully.");
+            var deleteState = await _userService.deleteUser(id);
+            if (!deleteState)
+            {
+                return BadRequest("operation is not successful, please check the provided user info to remove!");
+            }
+            return Ok("user deleted successfully");
         }
 
         // Admin borrowing books

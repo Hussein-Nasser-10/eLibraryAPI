@@ -7,6 +7,7 @@
         public string Author { get; set; }
         public string Genre { get; set; }
         public int Amount { get; set; }
-        public string ImageUrl { get; set; }
+        public string? ImageUrl { get; set; }
+        public IFormFile Image { get; set; }
     }
 }

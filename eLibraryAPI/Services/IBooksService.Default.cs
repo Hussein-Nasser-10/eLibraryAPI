@@ -12,10 +12,12 @@ namespace eLibraryAPI.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
-        public BooksService(ApplicationDbContext context,IMapper mapper)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        public BooksService(ApplicationDbContext context,IMapper mapper, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _mapper = mapper;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<List<BookDto>> GetBooks()
@@ -44,6 +46,35 @@ namespace eLibraryAPI.Services
             return bookId;
         }
 
+        public async Task<string> uploadImage(IFormFile imageFile)
+        {
+            if (imageFile == null || imageFile.Length == 0)
+                return null;
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await imageFile.CopyToAsync(fileStream);
+            }
+
+            // Build the full image URL
+            var request = _httpContextAccessor.HttpContext.Request;
+            var baseUrl = $"{request.Scheme}://{request.Host}"; // e.g., https://localhost:5001
+            var imageUrl = $"{baseUrl}/images/{uniqueFileName}";
+
+            return imageUrl;
+        }
+
+
         public async Task<int> updateBook(BookModel bookModel)
         {
             var book = await _context.Books.Where(x => x.BookId == bookModel.Id).FirstOrDefaultAsync();
@@ -60,6 +91,18 @@ namespace eLibraryAPI.Services
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<BookDto>> searchBook(BookSearchModel model)
+        {
+            var books = await _context.Books
+                .Where(x => (string.IsNullOrEmpty(model.Author) || model.Author == x.Author)
+                    && (string.IsNullOrEmpty(model.Genre) || model.Genre == x.Genre)
+                    && (string.IsNullOrEmpty(model.Title) || model.Title == x.Title)
+                )
+                .Select(x => _mapper.Map<BookDto>(x))
+                .ToListAsync();
+            return books;
         }
     }
 }

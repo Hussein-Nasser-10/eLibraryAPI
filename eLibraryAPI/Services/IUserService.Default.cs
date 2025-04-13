@@ -24,5 +24,19 @@ namespace eLibraryAPI.Services
             }
             return result.Succeeded;
         }
+
+        public async Task<bool> deleteUser(string userGuid)
+        {
+            var user = await _userManager.FindByIdAsync(userGuid);
+            if (user == null)
+            {
+                // User not found
+                return false;
+            }
+            
+            // Delete the user
+            var result = await _userManager.DeleteAsync(user);
+            return result.Succeeded;
+        }
     }
 }
