@@ -55,7 +55,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", builder =>
-        builder.WithOrigins("http://localhost:3000") // Adjust as needed
+        builder.WithOrigins("http://localhost:5173") //match React's dev server
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
@@ -87,6 +87,8 @@ if (app.Environment.IsDevelopment())
 
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 

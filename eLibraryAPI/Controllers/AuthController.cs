@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -32,11 +33,17 @@ namespace eLibraryAPI.Controllers
         public async Task<IActionResult> Login([FromBody] AuthModels.LoginModel model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
+
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
+                var roles = await _userManager.GetRolesAsync(user);
                 var token = await generateToken(user);
 
-                return Ok(new { Token = token });
+                return Ok(
+                    new { Token = token,
+                        Role = roles.FirstOrDefault(), // assuming one role per user
+                        Username = user.UserName
+                    });
             }
 
             return Unauthorized();

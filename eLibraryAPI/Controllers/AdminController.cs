@@ -25,29 +25,29 @@ namespace eLibraryAPI.Controllers
             _booksService = booksService;
         }
 
-        // Add a new book
-        [HttpPost("addBook1")]
-        public async Task<IActionResult> AddBook([FromBody] Book book, IFormFile imageFile)
-        {
-            if (imageFile != null && imageFile.Length > 0)
-            {
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
-                if (!Directory.Exists(uploadsFolder))
-                    Directory.CreateDirectory(uploadsFolder);
+        //// Add a new book
+        //[HttpPost("addBook1")]
+        //public async Task<IActionResult> AddBook([FromBody] Book book, IFormFile imageFile)
+        //{
+        //    if (imageFile != null && imageFile.Length > 0)
+        //    {
+        //        var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+        //        if (!Directory.Exists(uploadsFolder))
+        //            Directory.CreateDirectory(uploadsFolder);
 
-                var uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.FileName;
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await imageFile.CopyToAsync(stream);
-                }
-                book.ImageUrl = "/uploads/" + uniqueFileName;
-            }
+        //        var uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.FileName;
+        //        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+        //        using (var stream = new FileStream(filePath, FileMode.Create))
+        //        {
+        //            await imageFile.CopyToAsync(stream);
+        //        }
+        //        book.ImageUrl = "/uploads/" + uniqueFileName;
+        //    }
 
-            _context.Books.Add(book);
-            await _context.SaveChangesAsync();
-            return Ok("Book added successfully.");
-        }
+        //    _context.Books.Add(book);
+        //    await _context.SaveChangesAsync();
+        //    return Ok("Book added successfully.");
+        //}
 
         [HttpPost("addBook")]
         public async Task<IActionResult> addBook([FromForm] BookModel book)
