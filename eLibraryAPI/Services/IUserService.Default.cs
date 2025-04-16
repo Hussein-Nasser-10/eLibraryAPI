@@ -1,6 +1,8 @@
 ﻿
+using eLibraryAPI.Models.Dtos;
 using eLibraryAPI.Models.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace eLibraryAPI.Services
 {
@@ -8,7 +10,6 @@ namespace eLibraryAPI.Services
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-
         public UserService(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
@@ -37,6 +38,20 @@ namespace eLibraryAPI.Services
             // Delete the user
             var result = await _userManager.DeleteAsync(user);
             return result.Succeeded;
+        }
+
+        public async Task<List<UserDto>> getUsers(string adminId)
+        {
+            var users = await _userManager.Users
+                .Where(x => x.Id != adminId)
+            .Select(x => new UserDto
+            {
+                Id = x.Id,
+                UserName = x.UserName,
+                Email = x.Email
+            }).ToListAsync();
+
+            return users;
         }
     }
 }

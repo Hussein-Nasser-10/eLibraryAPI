@@ -1,4 +1,5 @@
-﻿using eLibraryAPI.Models.Models;
+﻿using eLibraryAPI.Models.Dtos;
+using eLibraryAPI.Models.Models;
 
 namespace eLibraryAPI.Services
 {
@@ -6,5 +7,6 @@ namespace eLibraryAPI.Services
     {
         public Task<bool> createUser(UserModel user);
         public Task<bool> deleteUser(string userGuid);
+        public Task<List<UserDto>> getUsers(string adminId);
     }
 }

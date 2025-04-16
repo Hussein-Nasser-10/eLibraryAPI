@@ -68,7 +68,7 @@ namespace eLibraryAPI.Controllers
         }
 
 
-        [HttpPost("updateBook")]
+        [HttpPut("updateBook")]
         public async Task<IActionResult> UpdateBook(BookModel model)
         {
             await _booksService.updateBook(model);

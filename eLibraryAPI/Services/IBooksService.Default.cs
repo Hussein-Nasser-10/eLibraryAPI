@@ -78,7 +78,10 @@ namespace eLibraryAPI.Services
         public async Task<int> updateBook(BookModel bookModel)
         {
             var book = await _context.Books.Where(x => x.BookId == bookModel.Id).FirstOrDefaultAsync();
-            book = _mapper.Map<Book>(bookModel);
+            book.Amount = bookModel.Amount;
+            book.Author = bookModel.Author;
+            book.Title = bookModel.Title;
+            book.Genre = bookModel.Genre;
             _context.Books.Update(book);
             await _context.SaveChangesAsync();
             return book.BookId;
