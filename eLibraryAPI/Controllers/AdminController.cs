@@ -18,11 +18,12 @@ namespace eLibraryAPI.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IBooksService _booksService;
         private readonly IUserService _userService;
-        public AdminController(ApplicationDbContext context, IWebHostEnvironment environment,IBooksService booksService)
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment environment,IBooksService booksService,IUserService userService)
         {
             _context = context;
             _environment = environment;
             _booksService = booksService;
+            _userService = userService;
         }
 
         //// Add a new book
